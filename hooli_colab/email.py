@@ -1,3 +1,5 @@
+""" hooli stuff for sending an email """
+
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 from flask import current_app

@@ -1,3 +1,4 @@
+""" hooli flask app route switches et al """
 
 import os
 from urllib.parse import urljoin
@@ -587,7 +588,8 @@ def toggle_like(file_id):
     Toggle the like status of a media file for the current user.
 
     This route handles the toggling of a like status for a media file identified by `file_id`.
-    If the user is not authenticated, it returns a JSON response indicating the user is not authenticated.
+    If the user is not authenticated, it returns a JSON response indicating the user
+    is not authenticated.
     If the user has already liked the media file, the like is removed (unliked).
     If the user has not liked the media file, a new like is added.
 
@@ -596,7 +598,8 @@ def toggle_like(file_id):
 
     Returns:
         Response: A JSON response with the status of the like action ('liked' or 'unliked').
-        If the user is not authenticated, returns a JSON response with status 'not_authenticated' and HTTP status code 401.
+        If the user is not authenticated, returns a JSON response with status 'not_authenticated'
+        and HTTP status code 401.
     """
     from hooli_colab import db
 

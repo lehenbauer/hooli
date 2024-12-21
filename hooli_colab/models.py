@@ -1,6 +1,9 @@
-from hooli_colab import db
-from flask_security import UserMixin, RoleMixin
+""" hooli data models for sqlalchemy """
+
 import uuid
+from flask_security import UserMixin, RoleMixin
+
+from hooli_colab import db
 
 
 class MediaDirectory(db.Model):
@@ -116,7 +119,8 @@ class Stars(db.Model):
         media_file (MediaFile): The media file being rated.
 
     Constraints:
-        __table_args__: Unique constraint on media_file_id and user_id to ensure a user can rate a media file only once.
+        __table_args__: Unique constraint on media_file_id and user_id to ensure a user
+            can rate a media file only once.
     """
 
     __tablename__ = "stars"
@@ -158,7 +162,8 @@ class Likes(db.Model):
 
     Relationships:
         user (User): Relationship to the User model, indicating the user who liked the media file.
-        media_file (MediaFile): Relationship to the MediaFile model, indicating the media file that was liked.
+        media_file (MediaFile): Relationship to the MediaFile model, indicating the media
+            file that was liked.
 
     Constraints:
         __table_args__: Unique constraint ensuring a user can only like a specific media file once.

@@ -1,12 +1,3 @@
-
-
-
-import os
-from dotenv import load_dotenv
-from flask import Flask
-
-load_dotenv()
-
 """
 This module initializes the Flask application for Hooli Colab, including configuration settings,
 database setup, and security features.
@@ -23,7 +14,8 @@ Modules and Packages:
 
 Configuration:
 - MEDIA_ROOT: Path to the media directory.
-- APPLICATION_ROOT: URL prefix for the application.  We are rooted here even if we reference /, /login, /logout, etc.
+- APPLICATION_ROOT: URL prefix for the application.  We are rooted here even if we reference /,
+    /login, /logout, etc.
 - SQLALCHEMY_DATABASE_URI: URI for the SQLite database.
 - SQLALCHEMY_TRACK_MODIFICATIONS: Flag to disable modification tracking.
 - SECRET_KEY: Secret key for session management and flashing messages.
@@ -55,11 +47,18 @@ Initialization:
 - SQLAlchemy instance.
 - Flask-Security instance with custom forms and email task.
 """
+
+import os
+from dotenv import load_dotenv
+from flask import Flask
+
 from flask_mail import Mail, Message
 from flask_sqlalchemy import SQLAlchemy
 from flask_security import Security, SQLAlchemyUserDatastore
 from hooli_colab.forms import CustomLoginForm, ExtendedRegisterForm
 from hooli_colab.email import send_mail_task
+
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -125,8 +124,8 @@ db = SQLAlchemy(app)
 
 # Import models and routes after initializing db
 from hooli_colab import models, routes
-
 from hooli_colab.models import User, Role
+
 
 # Setup the user data store with SQLAlchemy, using the User and Role models
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -139,4 +138,3 @@ security = Security(
     register_form=ExtendedRegisterForm,
     send_mail_task=send_mail_task,
 )
-

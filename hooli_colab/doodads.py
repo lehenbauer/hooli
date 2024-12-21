@@ -1,4 +1,5 @@
-import logging
+""" assorted doodads for hooli """
+
 from flask import current_app
 
 def rating_to_stars(rating, max_rating=5):
@@ -12,7 +13,6 @@ def rating_to_stars(rating, max_rating=5):
              represent full points, half stars (⭐) represent half points, and empty stars (☆)
              represent no points.
     """
-    """ """
     filled_star = "★"
     half_star = "⭐"
     empty_star = "☆"
@@ -27,7 +27,8 @@ def rating_to_stars(rating, max_rating=5):
             stars += empty_star
     return stars
 
-def log_message(message, level="info", *args):
+def log_message(message, *args, level="info"):
+    """ log a message to the application logger """
     if level.lower() == 'info':
         current_app.logger.info(message, *args)
     elif level.lower() == 'warning':

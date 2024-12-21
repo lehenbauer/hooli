@@ -2,6 +2,8 @@
 
 from flask_wtf import FlaskForm
 from flask_security.forms import RegisterForm, LoginForm
+from flask_security.utils import verify_password
+
 from wtforms import StringField, PasswordField, SubmitField, HiddenField, TextAreaField
 from wtforms.validators import (
     DataRequired,
@@ -11,7 +13,6 @@ from wtforms.validators import (
     EqualTo,
     Optional,
 )
-from flask_security.utils import verify_password
 
 
 class ExtendedRegisterForm(RegisterForm):
@@ -74,7 +75,8 @@ class ExtendedRegisterForm(RegisterForm):
 
 class CustomLoginForm(FlaskForm):
     """
-    CustomLoginForm is a subclass of FlaskForm that provides a custom login form allowing users to log in using either their username or email.
+    CustomLoginForm is a subclass of FlaskForm that provides a custom login form allowing
+    users to log in using either their username or email.
 
     Attributes:
         username_or_email (StringField): A field for the user to input their username or email.
@@ -83,7 +85,8 @@ class CustomLoginForm(FlaskForm):
         submit (SubmitField): A submit button for the form.
 
     Methods:
-        validate(**kwargs): Validates the login by checking if the user exists by email or username and verifies the password.
+        validate(**kwargs): Validates the login by checking if the user exists by email
+            or username and verifies the password.
     """
 
     username_or_email = StringField("Username or Email", validators=[DataRequired()])
@@ -119,7 +122,8 @@ class ForgotPasswordForm(FlaskForm):
     ForgotPasswordForm is a form for users to request a password reset.
 
     Attributes:
-        email (StringField): A field for the user's email address, with validators to ensure the field is not empty and contains a valid email address.
+        email (StringField): A field for the user's email address, with validators to ensure
+            the field is not empty and contains a valid email address.
         submit (SubmitField): A field for submitting the form to request a password reset.
     """
 
@@ -132,12 +136,15 @@ class ResetPasswordForm(FlaskForm):
     ResetPasswordForm is a FlaskForm for resetting a user's password.
 
     Fields:
-        password (PasswordField): A field for the new password with validators to ensure it is provided and at least 8 characters long.
-        confirm_password (PasswordField): A field to confirm the new password with validators to ensure it is provided and matches the password field.
+        password (PasswordField): A field for the new password with validators to ensure it
+            is provided and at least 8 characters long.
+        confirm_password (PasswordField): A field to confirm the new password with validators
+            to ensure it is provided and matches the password field.
         submit (SubmitField): A submit button for the form.
 
     Methods:
-        validate_password(field): Custom validator to ensure the password contains at least one uppercase letter, one lowercase letter, and one number.
+        validate_password(field): Custom validator to ensure the password contains at least
+            one uppercase letter, one lowercase letter, and one number.
 
     Raises:
         ValidationError: If the password does not meet the complexity requirements.
@@ -181,6 +188,7 @@ class ResetPasswordForm(FlaskForm):
 
 
 class EditMediaFileMetadataForm(FlaskForm):
+    """ EditMediaFileMetadataForm is a form for editing the metadata of a media file. """
     title = StringField("Title", validators=[Optional()])
     artist = StringField("Artist", validators=[Optional()])
     album = StringField("Album", validators=[Optional()])
@@ -191,12 +199,14 @@ class EditMediaFileMetadataForm(FlaskForm):
 
 
 class AddCommentForm(FlaskForm):
+    """ Form for adding a comment to a media file """
     comment = TextAreaField(
         "Comment", validators=[DataRequired()], render_kw={"rows": 4, "cols": 80}
     )
     submit = SubmitField("Add Comment")
 
 class MediaDirectoryForm(FlaskForm):
+    """ form for setting data and metadata for a media directory """
     dirpath = StringField('Directory Path', validators=[DataRequired(), Length(max=500)])
     title = StringField('Title', validators=[Optional(), Length(max=255)])
     description = TextAreaField('Description', validators=[Optional()])
