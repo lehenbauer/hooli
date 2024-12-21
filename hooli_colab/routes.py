@@ -1,3 +1,8 @@
+
+import os
+from urllib.parse import urljoin
+import uuid
+
 from flask import (
     render_template,
     request,
@@ -8,26 +13,25 @@ from flask import (
     jsonify,
 )
 from flask_security import (
-    Security,
-    SQLAlchemyUserDatastore,
     login_required,
     current_user,
     logout_user,
     login_user,
     roles_accepted,
-    roles_required,
 )
 
 from flask_security.utils import hash_password, verify_password
 from flask_wtf.csrf import CSRFProtect
 
-from hooli_colab import app
+from werkzeug.utils import secure_filename
 
-csrf = CSRFProtect(app)
+from sqlalchemy import func
+from itsdangerous import URLSafeTimedSerializer
+
+from hooli_colab import app
 
 from hooli_colab.models import User, MediaFile, Comments, MediaDirectory, Stars, Likes
 from hooli_colab.forms import (
-    ExtendedRegisterForm,
     CustomLoginForm,
     ForgotPasswordForm,
     ResetPasswordForm,
@@ -36,17 +40,11 @@ from hooli_colab.forms import (
 )
 from hooli_colab.email import send_email
 from hooli_colab.doodads import (rating_to_stars, log_message)
-import os
-import uuid
-from urllib.parse import urljoin
-from werkzeug.utils import secure_filename
-
-from sqlalchemy import func
-from itsdangerous import URLSafeTimedSerializer
-from flask_mail import Message
 
 # from app import mail  # Ensure Flask-Mail is configured
-from werkzeug.security import generate_password_hash
+# from werkzeug.security import generate_password_hash
+
+csrf = CSRFProtect(app)
 
 
 def get_or_create_directory(relative_dirpath):
@@ -119,31 +117,29 @@ def get_rating_summary(file_id):
 
 
 def generate_reset_token(email):
-    def generate_reset_token(email):
-        """Generate a password reset token for the given email address
+    """Generate a password reset token for the given email address
 
-        Args:
-            email (str): The email address for which to generate the reset token.
+    Args:
+        email (str): The email address for which to generate the reset token.
 
-        Returns:
-            str: The generated password reset token.
-        """
+    Returns:
+        str: The generated password reset token.
+    """
 
     serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
     return serializer.dumps(email, salt=app.config["SECURITY_PASSWORD_SALT"])
 
 
 def verify_reset_token(token, expiration=3600):
-    def verify_reset_token(token, expiration=3600):
-        """Verify the password reset token
+    """Verify the password reset token
 
-        Args:
-            token (str): The password reset token to verify.
-            expiration (int, optional): The expiration time in seconds. Defaults to 3600.
+    Args:
+        token (str): The password reset token to verify.
+        expiration (int, optional): The expiration time in seconds. Defaults to 3600.
 
-        Returns:
-            str: The email address if the token is valid, None otherwise.
-        """
+    Returns:
+        str: The email address if the token is valid, None otherwise.
+    """
 
     serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
     try:
@@ -233,8 +229,7 @@ def browse_media(path):
             media_files=media_files_with_ratings_and_likes,
             path=path,
         )
-    else:
-        return "Not a directory", 404
+    return "Not a directory", 404
 
 
 @app.route("/directory/<int:dir_id>", methods=["GET", "POST"])
@@ -297,8 +292,6 @@ def view_media(file_id):
         Response: Renders the 'view_media.html' template with the media file details,
                   comments, user rating, average rating, number of ratings, and like status.
     """
-    from hooli_colab import db
-
     media_file = MediaFile.query.get_or_404(file_id)
     liked = user_likes(file_id)
     comment_form = AddCommentForm()
@@ -401,19 +394,19 @@ def login():
         if not form.next.data:
             next_page = url_for("browse_media")
         else:
-            next = form.next.data
+            next_link = form.next.data
             app_root = request.script_root  # e.g., "/hooli"
             if not app_root.endswith("/"):
                 app_root += "/"
-            relative_next = next.lstrip('/')
+            relative_next = next_link.lstrip('/')
             next_page = urljoin(app_root, relative_next)
 
         print(f'next page {next_page}')
         return redirect(next_page)
-    else:
-        print(f'Login failed for "{form.username_or_email.data}"')
-        if form.is_submitted():
-            flash("Invalid credentials", "danger")
+
+    print(f'Login failed for "{form.username_or_email.data}"')
+    if form.is_submitted():
+        flash("Invalid credentials", "danger")
     form.next.data = request.args.get("next")
     return render_template("login.html", form=form)
 
@@ -443,9 +436,8 @@ def forgot_password():
                     "password_reset_email_sent", email=form.email.data, _external=True
                 )
             )
-        else:
-            flash("Email address not found.", "danger")
-            return redirect(url_for("forgot_password", _external=True))
+        flash("Email address not found.", "danger")
+        return redirect(url_for("forgot_password", _external=True))
     return render_template("forgot_password.html", form=form)
 
 
@@ -466,7 +458,6 @@ def reset_password(token):
         or redirects to another route based on the outcome of the request.
     """
     from hooli_colab import db
-    from flask import flash  # Add this import
 
     email = verify_reset_token(token)
     if not email:
