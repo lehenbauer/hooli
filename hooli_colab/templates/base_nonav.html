@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head>
+    {% set default_title = "Hooli Hit Collaborator" %}
+    <title>{{ title or default_title }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body class="{% if dark_mode %}dark-mode{% endif %}">
+    {% block content %}{% endblock %}
+</body>
+</html>

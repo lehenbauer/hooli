@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+{% import "heart_icon_macro.html" as icons %}
+{% block content %}
+
+<!-- Add this div above the current-time div -->
+<div id="current-song" style="font-size: 1.5em; text-align: center; margin-bottom: 10px;"></div>
+<div id="current-time" style="font-size: 2em; text-align: right; margin-bottom: 10px;">00:00.0</div>
+
+<!-- Existing Audio Player and Controls -->
+<div id="audio-player-container" class="mb-4">
+    <audio id="main-audio-player" controls class="w-100">
+        <p>Your browser does not support the audio element.</p>
+    </audio>
+</div>
+
+<!-- Control Buttons -->
+<button id="heart-toggle" class="btn btn-outline-danger mb-3" onclick="toggleLiked()">
+    &#9829; Liked
+</button>
+<button id="continuous-toggle" class="btn btn-outline-secondary mb-3 active" onclick="toggleContinuousPlay()">
+    &#8734; Continuous
+</button>
+<button id="shuffle-toggle" class="btn btn-outline-secondary mb-3" onclick="toggleShufflePlay()">
+    &#x1F500; Shuffle
+</button>
+<button id="skip-button" class="btn btn-outline-secondary mb-3" onclick="skipToNextSong()">
+    &#9193; Skip
+</button>
+
+<!-- Scrollable Song List -->
+<div class="song-list-container">
+    <ul class="list-group">
+        {% if media_files %}
+        {% for item in media_files %}
+            {% set liked = item.liked %}
+            {% set file = item.media_file %}
+            {% if file.filetype.lower() in ['mp3', 'wav'] %}
+                <li class="list-group-item" data-liked="{{ 'true' if liked else 'false' }}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <!-- Heart Symbol -->
+                            {{ icons.heart_icon(file, liked) }}
+                            <!-- Play/Stop Button -->
+                            <button class="btn btn-primary btn-sm play-button" onclick="togglePlay(this, '{{ url_for('download_file', filename=file.filepath) }}')" data-file-url="{{ url_for('download_file', filename=file.filepath) }}">Play</button>
+                            <span>
+                                {{ item.unicode_stars }}
+                            </span>
+                            <span> <a href="{{ url_for('view_media', file_id=file.id) }}" class="btn btn-link btn-sm"> {{ file.title or file.filename }}</a> </span>
+                            <span class="ml-auto">
+                                {% if file.comments|length != 0 %}
+                                    {{ file.comments|length }} &#x1F4DD;
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </li>
+            {% endif %}
+        {% endfor %}
+        {% else %}
+            <li class="list-group-item">
+                <em>No tunes in folder</em>
+            </li>
+        {% endif %}
+    </ul>
+</div>
+
+<script>
+// JavaScript to control the central audio player
+let currentPlaying = null;
+let currentButton = null;
+let continuousPlay = true;
+let shufflePlay = false;
+
+// Toggle Continuous Play
+function toggleContinuousPlay() {
+    continuousPlay = !continuousPlay;
+    const button = document.getElementById('continuous-toggle');
+    if (continuousPlay) {
+        button.classList.add('active');
+        button.innerHTML = '&#8734; Continuous';
+    } else {
+        button.classList.remove('active');
+        button.innerHTML = '&#8734; Continuous';
+    }
+}
+
+// Toggle Shuffle Play
+function toggleShufflePlay() {
+    shufflePlay = !shufflePlay;
+    const button = document.getElementById('shuffle-toggle');
+    if (shufflePlay) {
+        button.classList.add('active');
+        button.innerHTML = '&#x1F500; Shuffle';
+    } else {
+        button.classList.remove('active');
+        button.innerHTML = '&#x1F500; Shuffle';
+    }
+}
+
+// Helper function to get visible media files
+function getVisibleMediaFiles() {
+    const listItems = document.querySelectorAll('.list-group-item');
+    const visibleFiles = [];
+    listItems.forEach(item => {
+        if (item.style.display !== 'none') {
+            const playButton = item.querySelector('.play-button');
+            const fileUrl = playButton.getAttribute('data-file-url');
+            if (fileUrl) {
+                visibleFiles.push(fileUrl);
+            }
+        }
+    });
+    return visibleFiles;
+}
+
+// Modify togglePlay to set data-file-url attribute
+function togglePlay(button, fileUrl) {
+    const audioPlayer = document.getElementById('main-audio-player');
+    const listItem = button.closest('.list-group-item');
+
+    if (currentPlaying && currentButton) {
+        currentButton.textContent = 'Play';
+        currentButton.classList.remove('btn-danger');
+        currentButton.classList.add('btn-primary');
+        currentButton.closest('.list-group-item').classList.remove('playing');
+    }
+
+    if (currentPlaying === fileUrl) {
+        audioPlayer.pause();
+        button.textContent = 'Play';
+        button.classList.remove('btn-danger');
+        button.classList.add('btn-primary');
+        listItem.classList.remove('playing');
+        currentPlaying = null;
+        currentButton = null;
+    } else {
+        audioPlayer.src = fileUrl;
+        audioPlayer.play();
+        button.textContent = 'Stop';
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-danger');
+        listItem.classList.add('playing');
+        currentPlaying = fileUrl;
+        currentButton = button;
+    }
+
+    audioPlayer.onended = () => {
+        skipToNextSong();
+    };
+
+    const currentTimeDisplay = document.getElementById('current-time');
+
+    audioPlayer.ontimeupdate = () => {
+    const minutes = Math.floor(audioPlayer.currentTime / 60);
+    const seconds = Math.floor(audioPlayer.currentTime % 60);
+    const tenths = Math.floor((audioPlayer.currentTime % 1) * 10);
+    currentTimeDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`;
+};
+
+    // Scroll to the playing song
+    if (listItem) {
+        listItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function skipToNextSong() {
+    if (continuousPlay) {
+        const files = getVisibleMediaFiles();
+        if (files.length === 0) return;
+
+        let nextIndex;
+        if (shufflePlay) {
+            nextIndex = Math.floor(Math.random() * files.length);
+        } else {
+            nextIndex = files.indexOf(currentPlaying) + 1;
+        }
+
+        if (nextIndex < files.length) {
+            const nextFile = files[nextIndex];
+            const nextButton = document.querySelector(`.play-button[data-file-url="${nextFile}"]`);
+            if (nextButton) {
+                togglePlay(nextButton, nextFile);
+            }
+        } else {
+            // Last song reached
+            audioPlayer.pause();
+            currentPlaying = null;
+            currentButton = null;
+        }
+    } else {
+        // Continuous Play is off; do nothing
+        currentPlaying = null;
+        currentButton = null;
+    }
+}
+
+function toggleLiked() {
+    const button = document.getElementById('heart-toggle');
+    const showLikedOnly = button.classList.toggle('active');
+    const listItems = document.querySelectorAll('.list-group-item');
+    listItems.forEach(item => {
+        if (showLikedOnly && item.getAttribute('data-liked') !== 'true') {
+            item.style.display = 'none';
+        } else {
+            item.style.display = '';
+        }
+    });
+    button.innerHTML = showLikedOnly ? '&#9829; Liked' : '&#9829; Liked';
+}
+</script>
+
+<style>
+.playing {
+    background-color: var(--playing-bg) !important;
+}
+
+.song-list-container {
+    height: 800px;
+    overflow-y: auto;
+}
+
+.list-group-item {
+    background-color: var(--list-bg);
+    border-color: rgba(140, 140, 140, 0.2);
+}
+
+.list-group-item:hover {
+    background-color: var(--playing-bg);
+}
+</style>
+
+{% endblock %}

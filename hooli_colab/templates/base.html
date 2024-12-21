@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+    {% set default_title = "Hooli Hit Collaborator" %}
+    <title>{{ title or default_title }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {% block styles %}
+    <!-- Other styles -->
+    <style>
+    :root {
+        --bg-color: #ffffff;
+        --text-color: #000000;
+        --navbar-bg: #f8f9fa;
+        --list-bg: #ffffff;
+        --playing-bg: #f0f8ff;
+    }
+    .dark-mode {
+        --bg-color: #121212;
+        --text-color: #ffffff;
+        --navbar-bg: #343a40;
+        --list-bg: #1e1e1e;
+        --playing-bg: #2c3440;
+    }
+    body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+    }
+    .navbar {
+        background-color: var(--navbar-bg) !important;
+    }
+    .heart-icon {
+        cursor: pointer;
+        font-size: 24px;
+        vertical-align: middle;
+        margin-right: 5px;
+    }
+    .heart-icon.liked {
+        color: red;
+    }
+    .heart-icon.unliked {
+        color: grey;
+    }
+    </style>
+    {% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{{ url_for('browse_media') }}">
+            <img src="{{ url_for('static', filename='hooli.png') }}" alt="Hooli" width="30" height="30" class="d-inline-block align-top">
+            <span class="d-none d-md-inline">Hit Collaborator</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" 
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <span class="navbar-text">Welcome, <a href="{{ url_for('user_profile') }}" class="username-link">{{ current_user.username }}</a>!</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('security.logout', next=request.args.get('next')) }}">Logout</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login', next=request.path) }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('security.register', next=request.args.get('next')) }}">Register</a>
+                    </li>
+                {% endif %}
+                <!-- Dark Mode Toggle -->
+                <li class="nav-item">
+                    <button id="darkModeToggle" class="btn btn-outline-secondary ml-3">
+                        🌙
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+    <main class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% block content %}
+
+<!-- Add this div above the current-time div -->
+<div id="current-song" class="current-song"></div>
+<div id="current-time" class="current-time">00:00.0</div>
+
+<!-- Existing Audio Player and Controls -->
+<div id="audio-player-container" class="mb-4">
+    <audio id="main-audio-player" controls class="w-100">
+        <p>Your browser does not support the audio element.</p>
+    </audio>
+</div>
+
+<!-- Control Buttons -->
+<div class="control-buttons mb-3 d-flex flex-wrap justify-content-center">
+    <button id="heart-toggle" class="btn btn-outline-danger mb-2 mx-1" onclick="toggleLiked()">
+        &#9829; Liked
+    </button>
+    <button id="continuous-toggle" class="btn btn-outline-secondary mb-2 mx-1 active" onclick="toggleContinuousPlay()">
+        &#8734; Continuous
+    </button>
+    <button id="shuffle-toggle" class="btn btn-outline-secondary mb-2 mx-1" onclick="toggleShufflePlay()">
+        &#x1F500; Shuffle
+    </button>
+    <button id="skip-button" class="btn btn-outline-secondary mb-2 mx-1" onclick="skipToNextSong()">
+        &#9193; Skip
+    </button>
+</div>
+
+<!-- Scrollable Song List -->
+<div class="song-list-container">
+    <ul class="list-group">
+        {% if media_files %}
+        {% for item in media_files %}
+            {% set liked = item.liked %}
+            {% set file = item.media_file %}
+            {% if file.filetype.lower() in ['mp3', 'wav'] %}
+                <li class="list-group-item" data-liked="{{ 'true' if liked else 'false' }}">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div class="d-flex align-items-center">
+                            <!-- Heart Symbol -->
+                            {{ icons.heart_icon(file, liked) }}
+                            <!-- Play/Stop Button -->
+                            <button class="btn btn-primary btn-sm play-button mr-2" onclick="togglePlay(this, '{{ url_for('download_file', filename=file.filepath) }}')" data-file-url="{{ url_for('download_file', filename=file.filepath) }}">Play</button>
+                            <span>{{ item.unicode_stars }}</span>
+                            <span> <a href="{{ url_for('view_media', file_id=file.id) }}" class="btn btn-link btn-sm"> {{ file.title or file.filename }}</a> </span>
+                        </div>
+                        <span class="ml-auto">
+                            {% if file.comments|length != 0 %}
+                                {{ file.comments|length }} &#x1F4DD;
+                            {% endif %}
+                        </span>
+                    </div>
+                </li>
+            {% endif %}
+        {% endfor %}
+        {% else %}
+            <li class="list-group-item">
+                <em>No tunes in folder</em>
+            </li>
+        {% endif %}
+    </ul>
+</div>
+
+<script>
+// JavaScript to control the central audio player
+let currentPlaying = null;
+let currentButton = null;
+let continuousPlay = true;
+let shufflePlay = false;
+
+// Toggle Continuous Play
+function toggleContinuousPlay() {
+    continuousPlay = !continuousPlay;
+    const button = document.getElementById('continuous-toggle');
+    button.classList.toggle('active');
+}
+
+// Toggle Shuffle Play
+function toggleShufflePlay() {
+    shufflePlay = !shufflePlay;
+    const button = document.getElementById('shuffle-toggle');
+    button.classList.toggle('active');
+}
+
+// Helper function to get visible media files
+function getVisibleMediaFiles() {
+    const listItems = document.querySelectorAll('.list-group-item');
+    const visibleFiles = [];
+    listItems.forEach(item => {
+        if (item.style.display !== 'none') {
+            const playButton = item.querySelector('.play-button');
+            const fileUrl = playButton.getAttribute('data-file-url');
+            if (fileUrl) {
+                visibleFiles.push(fileUrl);
+            }
+        }
+    });
+    return visibleFiles;
+}
+
+// Modify togglePlay to set data-file-url attribute
+function togglePlay(button, fileUrl) {
+    const audioPlayer = document.getElementById('main-audio-player');
+    const listItem = button.closest('.list-group-item');
+
+    if (currentPlaying && currentButton) {
+        currentButton.textContent = 'Play';
+        currentButton.classList.remove('btn-danger');
+        currentButton.classList.add('btn-primary');
+        currentButton.closest('.list-group-item').classList.remove('playing');
+    }
+
+    if (currentPlaying === fileUrl) {
+        audioPlayer.pause();
+        button.textContent = 'Play';
+        button.classList.remove('btn-danger');
+        button.classList.add('btn-primary');
+        listItem.classList.remove('playing');
+        currentPlaying = null;
+        currentButton = null;
+    } else {
+        audioPlayer.src = fileUrl;
+        audioPlayer.play();
+        button.textContent = 'Stop';
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-danger');
+        listItem.classList.add('playing');
+        currentPlaying = fileUrl;
+        currentButton = button;
+    }
+
+    audioPlayer.onended = () => {
+        skipToNextSong();
+    };
+
+    const currentTimeDisplay = document.getElementById('current-time');
+
+    audioPlayer.ontimeupdate = () => {
+        const minutes = Math.floor(audioPlayer.currentTime / 60);
+        const seconds = Math.floor(audioPlayer.currentTime % 60);
+        const tenths = Math.floor((audioPlayer.currentTime % 1) * 10);
+        currentTimeDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${tenths}`;
+    };
+
+    // Scroll to the playing song
+    if (listItem) {
+        listItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function skipToNextSong() {
+    if (continuousPlay) {
+        const files = getVisibleMediaFiles();
+        if (files.length === 0) return;
+
+        let nextIndex;
+        if (shufflePlay) {
+            nextIndex = Math.floor(Math.random() * files.length);
+        } else {
+            nextIndex = files.indexOf(currentPlaying) + 1;
+        }
+
+        if (nextIndex < files.length) {
+            const nextFile = files[nextIndex];
+            const nextButton = document.querySelector(`.play-button[data-file-url="${nextFile}"]`);
+            if (nextButton) {
+                togglePlay(nextButton, nextFile);
+            }
+        } else {
+            // Last song reached
+            audioPlayer.pause();
+            currentPlaying = null;
+            currentButton = null;
+        }
+    } else {
+        // Continuous Play is off; do nothing
+        currentPlaying = null;
+        currentButton = null;
+    }
+}
+
+function toggleLiked() {
+    const button = document.getElementById('heart-toggle');
+    const showLikedOnly = button.classList.toggle('active');
+    const listItems = document.querySelectorAll('.list-group-item');
+    listItems.forEach(item => {
+        if (showLikedOnly && item.getAttribute('data-liked') !== 'true') {
+            item.style.display = 'none';
+        } else {
+            item.style.display = '';
+        }
+    });
+}
+
+// Responsive Adjustments
+function adjustLayout() {
+    if (window.innerWidth <= 768) {
+        document.querySelector('.song-list-container').style.height = '400px';
+        document.querySelector('.control-buttons').classList.add('flex-column');
+        document.querySelectorAll('.control-buttons .btn').forEach(btn => {
+            btn.classList.remove('mx-1');
+            btn.classList.add('w-100', 'mb-2');
+        });
+    } else {
+        document.querySelector('.song-list-container').style.height = '800px';
+        document.querySelector('.control-buttons').classList.remove('flex-column');
+        document.querySelectorAll('.control-buttons .btn').forEach(btn => {
+            btn.classList.remove('w-100', 'mb-2');
+            btn.classList.add('mx-1');
+        });
+    }
+}
+
+window.addEventListener('resize', adjustLayout);
+window.addEventListener('load', adjustLayout);
+
+// Optional: Detect Mobile Devices with JavaScript
+
+function isMobileDevice() {
+    return /Mobi|Android/i.test(navigator.userAgent);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (isMobileDevice()) {
+        document.body.classList.add('mobile-device');
+        // Additional mobile-specific scripts if needed
+    }
+});
+</script>
+
+<style>
+.playing {
+    background-color: var(--playing-bg) !important;
+}
+
+.song-list-container {
+    height: 800px;
+    overflow-y: auto;
+}
+
+.list-group-item {
+    background-color: var(--list-bg);
+    border-color: rgba(140, 140, 140, 0.2);
+}
+
+.list-group-item:hover {
+    background-color: var(--playing-bg);
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .current-song {
+        font-size: 1.2em;
+        text-align: center;
+        margin-bottom: 8px;
+    }
+    .current-time {
+        font-size: 1.5em;
+        text-align: right;
+        margin-bottom: 8px;
+    }
+    .control-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .control-buttons .btn {
+        margin: 4px 0;
+    }
+    .song-list-container {
+        height: 400px;
+    }
+}
+</style>
+
+{% endblock %}
+    </main>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    {% block scripts %}
+    <!-- Other scripts -->
+    <script>
+    const theme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    if (theme === 'dark') {
+        document.body.classList.add('dark-mode');
+    } else if (theme === 'light') {
+        document.body.classList.remove('dark-mode');
+    } else if (prefersDark) {
+        document.body.classList.add('dark-mode');
+    }
+
+    document.getElementById('darkModeToggle').addEventListener('click', function() {
+        document.body.classList.toggle('dark-mode');
+        // Save preference
+        if(document.body.classList.contains('dark-mode')) {
+            localStorage.setItem('theme', 'dark');
+        } else {
+            localStorage.setItem('theme', 'light');
+        }
+    });
+
+    const baseUrl = "{{ request.script_root }}";
+
+    function toggleLike(element) {
+        const fileId = element.getAttribute('data-file-id');
+        fetch(`${baseUrl}/toggle_like/${fileId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'liked') {
+                element.classList.remove('unliked');
+                element.classList.add('liked');
+            } else if (data.status === 'unliked') {
+                element.classList.remove('liked');
+                element.classList.add('unliked');
+            }
+        });
+    }
+    </script>
+    {% endblock %}
+</body>
+</html>

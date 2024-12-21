@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h3>Edit Media File Metadata for "{{ media_file.filename | default('') }}"</h3>
+<form method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+        {{ form.title.label(class="form-label") }}
+        {{ form.title(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.artist.label(class="form-label") }}
+        {{ form.artist(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.album.label(class="form-label") }}
+        {{ form.album(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.genre.label(class="form-label") }}
+        {{ form.genre(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.tags.label(class="form-label") }}
+        {{ form.tags(class="form-control") }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.description.label(class="form-label") }}
+        {{ form.description(class="form-control", rows=3) }}
+    </div>
+
+    <div class="mb-3">
+        {{ form.image_path.label(class="form-label") }}
+        {{ form.image_path(class="form-control") }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Update</button>
+</form>
+{% endblock %}

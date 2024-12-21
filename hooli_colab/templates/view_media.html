@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% import "heart_icon_macro.html" as icons %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">
+        {{ icons.heart_icon(media_file, liked) }}
+        {{ media_file.title or media_file.filename }}
+    </h2>
+    {% if media_file.description %}
+        <p class="lead">{{ media_file.description }}</p>
+    {% endif %}
+    {% if media_file.image_path %}
+        <img src="{{ url_for('download_file', filename=media_file.image_path) }}" alt="Image" class="img-fluid mb-4">
+    {% endif %}
+    {% if media_file.filetype.lower() in ['mp3', 'wav'] %}
+        <div class="mb-4">
+            <audio controls class="w-100">
+                <source src="{{ url_for('download_file', filename=media_file.filepath) }}" type="audio/{{ media_file.filetype }}">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+    {% endif %}
+
+    <ul class="list-group">
+        {% if media_file.title %}
+            <li class="list-group-item"><strong>Title:</strong> {{ media_file.title }}</li>
+        {% endif %}
+        {% if media_file.artist %}
+            <li class="list-group-item"><strong>Artist:</strong> {{ media_file.artist }}</li>
+        {% endif %}
+        {% if media_file.album %}
+            <li class="list-group-item"><strong>Album:</strong> {{ media_file.album }}</li>
+        {% endif %}
+        {% if media_file.genre %}
+            <li class="list-group-item"><strong>Genre:</strong> {{ media_file.genre }}</li>
+        {% endif %}
+        {% if media_file.filename %}
+            <li class="list-group-item"><strong>Filename:</strong> {{ media_file.filename }}</li>
+        {% endif %}
+        {% if media_file.tags %}
+            <li class="list-group-item"><strong>Tags:</strong> {{ media_file.tags }}</li>
+        {% endif %}
+        {% if media_file.description %}
+            <li class="list-group-item"><strong>Description:</strong> {{ media_file.description }}</li>
+        {% endif %}
+        {% if media_file.image_path %}
+            <li class="list-group-item"><strong>Image Path:</strong> {{ media_file.image_path }}</li>
+        {% endif %}
+    </ul>
+
+    <div class="rating-summary mb-4">
+        <span>Rating: </span>
+        {% for i in range(1, 6) %}
+            {% if average_rating >= i %}
+                &#9733;
+            {% elif average_rating >= i - 0.5 %}
+                &#9733;&#xFE0E;
+            {% else %}
+                &#9734;
+            {% endif %}
+        {% endfor %}
+        <span>{{ average_rating }} out of 5</span>
+        <span>({{ number_of_ratings }} ratings)</span>
+    </div>
+
+    <div class="media-actions mb-4">
+        <a href="{{ url_for('download_file', filename=media_file.filepath) }}" class="btn btn-primary">Download</a>
+        {% if current_user.is_authenticated and (current_user.has_role('Admin') or current_user.has_role('Editor')) %}
+            <a href="{{ url_for('edit_media_file_metadata', media_id=media_file.id) }}" class="btn btn-secondary">Edit Metadata</a>
+        {% endif %}
+    </div>
+
+    <h4>Rate this Song</h4>
+    {% if current_user.is_authenticated %}
+        <div class="rating">
+            {% for i in range(1, 6) %}
+                <span class="star" data-value="{{ i }}">
+                    {% if user_rating and user_rating >= i %}
+                        &#9733;
+                    {% else %}
+                        &#9734;
+                    {% endif %}
+                </span>
+            {% endfor %}
+        </div>
+        <form id="rating-form" method="POST" action="{{ url_for('add_rating', media_id=media_file.id) }}" style="display: none;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="rating" id="rating-value">
+        </form>
+    {% else %}
+        <p class="mb-4">Please <a href="{{ url_for('security.login') }}">login</a> or <a href="{{ url_for('security.register') }}">register</a> to rate.</p>
+    {% endif %}
+
+    <h4>Comments ({{ comments|length }})</h4>
+    <ol class="list-group mb-4">
+    {% for comment in comments %}
+        <li class="list-group-item">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>{{ comment.user.username }}</strong> <small class="text-muted">({{ comment.timestamp }} - {{ comment.ip_address }})</small><br>
+                    {{ comment.content }}
+                </div>
+                {% if current_user.has_role('Admin') or current_user.has_role('Editor') %}
+                    <form method="POST" action="{{ url_for('delete_comment', comment_id=comment.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                {% endif %}
+            </div>
+        </li>
+    {% endfor %}
+    </ol>
+
+    <h4>Add a Comment</h4>
+    {% if current_user.is_authenticated %}
+        <form method="POST" action="{{ url_for('add_comment', media_id=media_file.id) }}" class="mb-4 comment-form">
+            {{ comment_form.hidden_tag() }}
+            <div class="form-group">
+                {{ comment_form.comment.label }}
+                {{ comment_form.comment(class="form-control") }}
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    {% else %}
+        <p class="mb-4">Please <a href="{{ url_for('security.login') }}">login</a> or <a href="{{ url_for('security.register') }}">register</a> to comment.</p>
+    {% endif %}
+</div>
+
+<script>
+    document.querySelectorAll('.star').forEach(function(star) {
+        star.addEventListener('click', function() {
+            var rating = this.getAttribute('data-value');
+            document.getElementById('rating-value').value = rating;
+            document.getElementById('rating-form').submit();
+        });
+    });
+</script>
+
+<style>
+    .star {
+        font-size: 2rem;
+        cursor: pointer;
+        color: gold;
+    }
+    .star:hover,
+    .star:hover ~ .star {
+        color: darkorange;
+    }
+    .list-group-item form {
+        margin: 0;
+    }
+    .list-group-item .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.6rem;
+    }
+</style>
+{% endblock %}
+

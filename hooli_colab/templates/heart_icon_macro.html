@@ -1,0 +1,10 @@
+<!-- heart_icon_macro.html -->
+
+{% macro heart_icon(file, liked) %}
+<span 
+    class="heart-icon {% if liked %}liked{% else %}unliked{% endif %}" 
+    data-file-id="{{ file.id }}" 
+    onclick="toggleLike(this)">
+    &#9829;
+</span>
+{% endmacro %}

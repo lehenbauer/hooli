@@ -1,0 +1,65 @@
+<!-- FILE: templates/security/register_user.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Register</h2>
+
+    {# Display any error messages #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form action="{{ url_for('security.register') }}" method="POST">
+        {{ register_user_form.hidden_tag() }}
+
+        <div class="form-group">
+            <label for="username">Username:</label>
+            {{ register_user_form.username(class="form-control", size=32) }}
+            {% if register_user_form.username.errors %}
+                {% for error in register_user_form.username.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email:</label>
+            {{ register_user_form.email(class="form-control", size=32) }}
+            {% if register_user_form.email.errors %}
+                {% for error in register_user_form.email.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="password">Password:</label>
+            {{ register_user_form.password(class="form-control", size=32) }}
+            {% if register_user_form.password.errors %}
+                {% for error in register_user_form.password.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="confirm_password">Confirm Password:</label>
+            {{ register_user_form.password_confirm(class="form-control", size=32) }}
+            {% if register_user_form.password_confirm.errors %}
+                {% for error in register_user_form.password_confirm.errors %}
+                    <span class="text-danger">{{ error }}</span>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <input type="submit" class="btn btn-primary" value="Register">
+        </div>
+    </form>
+</div>
+{% endblock %}
